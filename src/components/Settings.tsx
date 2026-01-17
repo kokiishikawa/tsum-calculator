@@ -70,7 +70,7 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
             設定
           </span>
           <span className="text-sm font-normal text-muted-foreground flex items-center gap-2">
-            {settings.usedTsum && `${settings.usedTsum} / `}倍率: {settings.coinMultiplier}x / コスト: {formatNumber(settings.itemCost)}
+            {settings.usedTsum ? `${settings.usedTsum} / ` : ''}倍率: {settings.coinMultiplier}x / コスト: {formatNumber(settings.itemCost)}
             {isOpen ? (
               <ChevronUp className="w-4 h-4" />
             ) : (
@@ -89,7 +89,7 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
               id="usedTsum"
               type="text"
               placeholder="例: ガストン、ナミネ"
-              value={settings.usedTsum}
+              value={settings.usedTsum ?? ''}
               onChange={(e) => onUpdateSettings({ usedTsum: e.target.value })}
               className="w-full"
             />
