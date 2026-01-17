@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Statistics as StatisticsType } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Statistics as StatisticsType, Play, Settings } from '@/types';
 import { formatNumber, formatTime } from '@/lib/calculator';
 import {
   Coins,
@@ -11,10 +13,15 @@ import {
   Calculator,
   Minus,
   Wallet,
+  Share2,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 interface StatisticsProps {
   statistics: StatisticsType;
+  plays: Play[];
+  settings: Settings;
 }
 
 interface StatCardProps {
@@ -56,11 +63,84 @@ function StatCard({ label, value, icon, highlight, subValue }: StatCardProps) {
   );
 }
 
-export function Statistics({ statistics }: StatisticsProps) {
+export function Statistics({ statistics, plays, settings }: StatisticsProps) {
+  const [copied, setCopied] = useState(false);
+
   const elapsedTimeFormatted =
     statistics.elapsedMinutes > 0
       ? formatTime(Math.round(statistics.elapsedMinutes * 60))
       : '00:00';
+
+  // 共有用テキストを生成
+  const generateShareText = () => {
+    // プレイ詳細テキストを生成（記録順）
+    const playDetails = plays
+      .map((play, index) => {
+        const earnedCoins = Math.round(play.rawCoins * settings.coinMultiplier);
+        return `${index + 1}回目: ${formatNumber(play.rawCoins)} → ${formatNumber(earnedCoins)}`;
+      })
+      .join('\n');
+
+    return `【ツムツム 30分効率】
+
+■ 結果
+30分効率: ${formatNumber(statistics.efficiency30min)} コイン
+1分効率: ${formatNumber(statistics.efficiency1min)} コイン
+
+■ サマリー
+プレイ回数: ${statistics.playCount} 回
+経過時間: ${elapsedTimeFormatted}
+総素コイン: ${formatNumber(statistics.totalRawCoins)}
+総獲得コイン: ${formatNumber(statistics.totalEarnedCoins)}
+アイテムコスト: ${formatNumber(statistics.totalItemCost)}
+実質獲得: ${formatNumber(statistics.netCoins)} コイン
+
+■ プレイ詳細（素コイン → 獲得）
+${playDetails || 'なし'}
+
+#ツムツム #効率計算`;
+  };
+
+  // Web Share API で共有
+  const handleShare = async () => {
+    const text = generateShareText();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'ツムツム 30分効率',
+          text: text,
+        });
+      } catch (error) {
+        // ユーザーがキャンセルした場合など
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Share failed:', error);
+        }
+      }
+    } else {
+      // Web Share API非対応の場合はクリップボードにコピー
+      handleCopy();
+    }
+  };
+
+  // クリップボードにコピー
+  const handleCopy = async () => {
+    const text = generateShareText();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Copy failed:', error);
+    }
+  };
+
+  // LINEで共有
+  const handleLineShare = () => {
+    const text = generateShareText();
+    const lineUrl = `https://line.me/R/share?text=${encodeURIComponent(text)}`;
+    window.open(lineUrl, '_blank');
+  };
 
   return (
     <div className="space-y-4">
@@ -77,6 +157,36 @@ export function Statistics({ statistics }: StatisticsProps) {
           <p className="text-sm opacity-80 mt-2">コイン / 30分</p>
         </CardContent>
       </Card>
+
+      {/* 共有ボタン */}
+      <div className="flex gap-2 justify-center">
+        <Button
+          onClick={handleShare}
+          variant="outline"
+          className="flex-1 max-w-32"
+        >
+          <Share2 className="w-4 h-4 mr-2" />
+          共有
+        </Button>
+        <Button
+          onClick={handleCopy}
+          variant="outline"
+          className="flex-1 max-w-32"
+        >
+          {copied ? (
+            <Check className="w-4 h-4 mr-2 text-green-500" />
+          ) : (
+            <Copy className="w-4 h-4 mr-2" />
+          )}
+          {copied ? 'コピー済' : 'コピー'}
+        </Button>
+        <Button
+          onClick={handleLineShare}
+          className="flex-1 max-w-32 bg-[#06C755] hover:bg-[#05b04c] text-white"
+        >
+          LINE
+        </Button>
+      </div>
 
       {/* サブ指標グリッド */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

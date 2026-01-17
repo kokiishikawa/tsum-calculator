@@ -5,11 +5,15 @@ import { Settings } from '@/components/Settings';
 import { PlayInput } from '@/components/PlayInput';
 import { Statistics } from '@/components/Statistics';
 import { PlayHistory } from '@/components/PlayHistory';
-import { useTimer, useCalculator } from '@/hooks';
+import { SavedSessions } from '@/components/SavedSessions';
+import { useTimer, useCalculator, useSessions } from '@/hooks';
+import { Button } from '@/components/ui/button';
+import { Save } from 'lucide-react';
 
 export default function Home() {
   const timer = useTimer(1800); // 30分 = 1800秒
   const calculator = useCalculator(timer.elapsedSeconds);
+  const sessions = useSessions();
 
   const handleAddPlay = (rawCoins: number) => {
     calculator.addPlay(rawCoins, timer.elapsedSeconds);
@@ -20,6 +24,20 @@ export default function Home() {
       timer.reset();
       calculator.clearAll();
     }
+  };
+
+  const handleSaveSession = () => {
+    if (calculator.plays.length === 0) {
+      alert('プレイ記録がありません');
+      return;
+    }
+    sessions.saveSession(
+      calculator.plays,
+      calculator.settings,
+      calculator.statistics,
+      timer.elapsedSeconds
+    );
+    alert('セッションを保存しました');
   };
 
   return (
@@ -53,7 +71,21 @@ export default function Home() {
         />
 
         {/* 統計表示セクション */}
-        <Statistics statistics={calculator.statistics} />
+        <Statistics
+          statistics={calculator.statistics}
+          plays={calculator.plays}
+          settings={calculator.settings}
+        />
+
+        {/* セッション保存ボタン */}
+        <Button
+          onClick={handleSaveSession}
+          disabled={calculator.plays.length === 0}
+          className="w-full bg-sky-600 hover:bg-sky-700"
+        >
+          <Save className="w-4 h-4 mr-2" />
+          このセッションを保存
+        </Button>
 
         {/* 履歴テーブルセクション */}
         <PlayHistory
@@ -61,6 +93,13 @@ export default function Home() {
           settings={calculator.settings}
           onDeletePlay={calculator.deletePlay}
           onClearAll={calculator.clearAll}
+        />
+
+        {/* 保存済みセッション */}
+        <SavedSessions
+          sessions={sessions.sessions}
+          onDeleteSession={sessions.deleteSession}
+          onClearAllSessions={sessions.clearAllSessions}
         />
 
         {/* フッター */}

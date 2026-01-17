@@ -69,3 +69,15 @@ export const DEFAULT_SETTINGS: Settings = {
   coinMultiplier: 1.3,
   itemCost: 2300, // +Coin + 5→4
 };
+
+/**
+ * 保存されたセッション
+ */
+export interface SavedSession {
+  id: string;
+  savedAt: number;           // 保存日時（Unix timestamp）
+  plays: Play[];             // プレイ履歴
+  settings: Settings;        // 設定
+  statistics: Statistics;    // 統計情報
+  elapsedSeconds: number;    // 経過秒数
+}

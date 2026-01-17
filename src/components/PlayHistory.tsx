@@ -82,7 +82,7 @@ export function PlayHistory({
                 return (
                   <TableRow key={play.id}>
                     <TableCell className="text-center font-medium">
-                      {plays.length - index}
+                      {index + 1}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {formatNumber(play.rawCoins)}

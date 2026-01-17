@@ -39,7 +39,7 @@ export function useCalculator(elapsedSeconds: number = 0): UseCalculatorReturn {
         timestamp: Date.now(),
         elapsedTime,
       };
-      setPlays((prev) => [newPlay, ...prev]);
+      setPlays((prev) => [...prev, newPlay]);
     },
     [setPlays]
   );
