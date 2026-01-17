@@ -16,6 +16,7 @@ export interface Play {
 export interface Settings {
   coinMultiplier: number;  // +Coin倍率（デフォルト: 1.3）
   itemCost: number;        // 1プレイあたりのアイテムコスト
+  usedTsum: string;        // 使用ツム名
 }
 
 /**
@@ -68,6 +69,7 @@ export const ITEM_COST_PRESETS: ItemCostPreset[] = [
 export const DEFAULT_SETTINGS: Settings = {
   coinMultiplier: 1.3,
   itemCost: 2300, // +Coin + 5→4
+  usedTsum: '',   // 使用ツム（未設定）
 };
 
 /**

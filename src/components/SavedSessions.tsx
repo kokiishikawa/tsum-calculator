@@ -69,9 +69,11 @@ export function SavedSessions({
       })
       .join('\n');
 
+    const tsumName = settings.usedTsum ? `使用ツム: ${settings.usedTsum}\n` : '';
+
     return `【ツムツム 30分効率】
 記録日時: ${savedDate}
-
+${tsumName}
 ■ 結果
 30分効率: ${formatNumber(statistics.efficiency30min)} コイン
 1分効率: ${formatNumber(statistics.efficiency1min)} コイン
@@ -151,6 +153,9 @@ ${playDetails || 'なし'}
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">
+                        {session.settings.usedTsum && (
+                          <span className="text-sky-600 mr-2">{session.settings.usedTsum}</span>
+                        )}
                         30分効率: {formatNumber(session.statistics.efficiency30min)}
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -220,7 +225,12 @@ ${playDetails || 'なし'}
           {selectedSession && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-xl">セッション詳細</DialogTitle>
+                <DialogTitle className="text-xl">
+                  セッション詳細
+                  {selectedSession.settings.usedTsum && (
+                    <span className="ml-2 text-sky-600">({selectedSession.settings.usedTsum})</span>
+                  )}
+                </DialogTitle>
                 <p className="text-sm text-muted-foreground">
                   {new Date(selectedSession.savedAt).toLocaleString('ja-JP')}
                 </p>

@@ -70,7 +70,7 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
             設定
           </span>
           <span className="text-sm font-normal text-muted-foreground flex items-center gap-2">
-            倍率: {settings.coinMultiplier}x / コスト: {formatNumber(settings.itemCost)}
+            {settings.usedTsum && `${settings.usedTsum} / `}倍率: {settings.coinMultiplier}x / コスト: {formatNumber(settings.itemCost)}
             {isOpen ? (
               <ChevronUp className="w-4 h-4" />
             ) : (
@@ -82,6 +82,22 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
 
       {isOpen && (
         <CardContent className="space-y-4">
+          {/* 使用ツム設定 */}
+          <div className="space-y-2">
+            <Label htmlFor="usedTsum">使用ツム</Label>
+            <Input
+              id="usedTsum"
+              type="text"
+              placeholder="例: ガストン、ナミネ"
+              value={settings.usedTsum}
+              onChange={(e) => onUpdateSettings({ usedTsum: e.target.value })}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              セッションで使用するツム名を入力
+            </p>
+          </div>
+
           {/* +Coin倍率設定 */}
           <div className="space-y-2">
             <Label htmlFor="multiplier">+Coin 倍率</Label>
