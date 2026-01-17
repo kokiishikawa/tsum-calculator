@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Timer } from '@/components/Timer';
 import { Settings } from '@/components/Settings';
 import { PlayInput } from '@/components/PlayInput';
@@ -8,27 +9,40 @@ import { PlayHistory } from '@/components/PlayHistory';
 import { SavedSessions } from '@/components/SavedSessions';
 import { useTimer, useCalculator, useSessions } from '@/hooks';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Save, Check } from 'lucide-react';
 
 export default function Home() {
   const timer = useTimer(1800); // 30分 = 1800秒
   const calculator = useCalculator(timer.elapsedSeconds);
   const sessions = useSessions();
 
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'empty'>('idle');
+
   const handleAddPlay = (rawCoins: number) => {
     calculator.addPlay(rawCoins, timer.elapsedSeconds);
   };
 
-  const handleReset = () => {
-    if (window.confirm('タイマーとすべての記録をリセットしますか？')) {
-      timer.reset();
-      calculator.clearAll();
-    }
+  const handleResetConfirm = () => {
+    timer.reset();
+    calculator.clearAll();
+    setShowResetDialog(false);
   };
 
   const handleSaveSession = () => {
     if (calculator.plays.length === 0) {
-      alert('プレイ記録がありません');
+      setSaveStatus('empty');
+      setTimeout(() => setSaveStatus('idle'), 2000);
       return;
     }
     sessions.saveSession(
@@ -37,7 +51,8 @@ export default function Home() {
       calculator.statistics,
       timer.elapsedSeconds
     );
-    alert('セッションを保存しました');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2000);
   };
 
   return (
@@ -55,7 +70,7 @@ export default function Home() {
           elapsedSeconds={timer.elapsedSeconds}
           onStart={timer.start}
           onPause={timer.pause}
-          onReset={handleReset}
+          onReset={() => setShowResetDialog(true)}
         />
 
         {/* 設定セクション */}
@@ -81,10 +96,27 @@ export default function Home() {
         <Button
           onClick={handleSaveSession}
           disabled={calculator.plays.length === 0}
-          className="w-full bg-sky-600 hover:bg-sky-700"
+          className={`w-full ${
+            saveStatus === 'saved'
+              ? 'bg-green-600 hover:bg-green-600'
+              : saveStatus === 'empty'
+              ? 'bg-red-500 hover:bg-red-500'
+              : 'bg-sky-600 hover:bg-sky-700'
+          }`}
         >
-          <Save className="w-4 h-4 mr-2" />
-          このセッションを保存
+          {saveStatus === 'saved' ? (
+            <>
+              <Check className="w-4 h-4 mr-2" />
+              保存しました！
+            </>
+          ) : saveStatus === 'empty' ? (
+            'プレイ記録がありません'
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              このセッションを保存
+            </>
+          )}
         </Button>
 
         {/* 履歴テーブルセクション */}
@@ -104,9 +136,27 @@ export default function Home() {
 
         {/* フッター */}
         <footer className="text-center text-sm text-muted-foreground py-4">
-          <p>ツムツム 30分効率計算機 v1.0</p>
+          <p>ツムツム 30分効率計算機 v1.2</p>
         </footer>
       </div>
+
+      {/* リセット確認ダイアログ */}
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>リセットしますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              タイマーとすべてのプレイ記録がリセットされます。この操作は取り消せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetConfirm}>
+              リセット
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

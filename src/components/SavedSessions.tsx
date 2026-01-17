@@ -10,6 +10,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -43,6 +53,8 @@ export function SavedSessions({
   const [isOpen, setIsOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<SavedSession | null>(null);
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
 
   // 共有用テキストを生成
   const generateShareText = (session: SavedSession) => {
@@ -148,11 +160,7 @@ ${playDetails || 'なし'}
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        if (window.confirm('このセッションを削除しますか？')) {
-                          onDeleteSession(session.id);
-                        }
-                      }}
+                      onClick={() => setDeleteSessionId(session.id)}
                       className="text-muted-foreground hover:text-red-600"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -196,11 +204,7 @@ ${playDetails || 'なし'}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                if (window.confirm('すべての保存済みセッションを削除しますか？')) {
-                  onClearAllSessions();
-                }
-              }}
+              onClick={() => setShowClearAllDialog(true)}
               className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4 mr-1" />
@@ -320,6 +324,56 @@ ${playDetails || 'なし'}
           )}
         </DialogContent>
       </Dialog>
+
+      {/* セッション削除確認ダイアログ */}
+      <AlertDialog open={!!deleteSessionId} onOpenChange={() => setDeleteSessionId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>セッションを削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              このセッションを削除します。この操作は取り消せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteSessionId) {
+                  onDeleteSession(deleteSessionId);
+                  setDeleteSessionId(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              削除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 全セッション削除確認ダイアログ */}
+      <AlertDialog open={showClearAllDialog} onOpenChange={setShowClearAllDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>すべてのセッションを削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              {sessions.length}件の保存済みセッションがすべて削除されます。この操作は取り消せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onClearAllSessions();
+                setShowClearAllDialog(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              削除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
