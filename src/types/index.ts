@@ -60,7 +60,7 @@ export const ITEM_COST_PRESETS: ItemCostPreset[] = [
   { label: '+Coin + 5→4 + +Time', value: 3300 },
   { label: '+Coin + 5→4 + +Bomb', value: 3800 },
   { label: 'フルアイテム', value: 6300 },
-  { label: 'カスタム', value: -1 },
+  { label: 'カスタム', value: -1 }, // 状態を表すためvalueは-1
 ];
 
 /**

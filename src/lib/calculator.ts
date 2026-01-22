@@ -50,7 +50,7 @@ export function calculateStatistics(
 }
 
 /**
- * 数値を日本語ロケールでフォーマット
+ * 数値を日本語ロケールでフォーマット(例：12,345,678)
  */
 export function formatNumber(num: number): string {
   return Math.round(num).toLocaleString('ja-JP');
