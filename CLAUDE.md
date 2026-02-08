@@ -14,6 +14,7 @@ LINE:ディズニー ツムツムのコイン稼ぎ効率を計算するWebア�
 - Styling: Tailwind CSS
 - UI: shadcn/ui
 - State: React Hooks + localStorage
+- Test: Jest
 
 ## プロジェクト構成
 
@@ -25,6 +26,9 @@ tsum-calculator/
 ├── .claude/
 │   ├── skills/             # スキル定義
 │   └── hooks/              # フック（実行可能スクリプト）
+├── __tests__/
+│   └── lib/
+│       └── calculator.test.ts  # 計算ロジックテストコード
 ├── app/
 │   ├── layout.tsx          # ルートレイアウト
 │   ├── page.tsx            # メインページ

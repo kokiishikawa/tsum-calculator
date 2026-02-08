@@ -1,6 +1,6 @@
 // lib/calculator.ts - 計算ロジック
 
-import { Play, Settings, Statistics } from '@/types';
+import { Play, Settings, Statistics, ITEM_COST_PRESETS } from '@/types';
 
 /**
  * 30分効率を計算
@@ -71,3 +71,12 @@ export function formatTime(seconds: number): string {
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
+
+/**
+ * アイテムコストからプリセット
+ */
+export function getItemCostLabel(itemCost: number): string {
+  const preset = ITEM_COST_PRESETS.find(p => p.value === itemCost);
+  return preset ? preset.label : `${formatNumber(itemCost)}コイン}`;
+}
+

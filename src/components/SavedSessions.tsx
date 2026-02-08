@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { SavedSession } from '@/types';
 import { formatNumber, formatTime } from '@/lib/calculator';
+import { RankingSubmitDialog } from '@/components/RankingSubmitDialog';
 import {
   Trash2,
   FolderOpen,
@@ -37,6 +38,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  Trophy,
 } from 'lucide-react';
 
 interface SavedSessionsProps {
@@ -55,6 +57,7 @@ export function SavedSessions({
   const [selectedSession, setSelectedSession] = useState<SavedSession | null>(null);
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
   const [showClearAllDialog, setShowClearAllDialog] = useState(false);
+  const [rankingSession, setRankingSession] = useState<SavedSession | null>(null);
 
   // 共有用テキストを生成
   const generateShareText = (session: SavedSession) => {
@@ -202,6 +205,15 @@ ${playDetails || 'なし'}
                       LINE
                     </Button>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRankingSession(session)}
+                    className="w-full border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                  >
+                    <Trophy className="w-4 h-4 mr-1" />
+                    ランキングに投稿
+                  </Button>
                 </div>
               );
             })}
@@ -384,6 +396,18 @@ ${playDetails || 'なし'}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ランキング投稿ダイアログ */}
+      {rankingSession && (
+        <RankingSubmitDialog
+          open={!!rankingSession}
+          onOpenChange={(open) => { if (!open) setRankingSession(null); }}
+          statistics={rankingSession.statistics}
+          settings={rankingSession.settings}
+          plays={rankingSession.plays}
+          elapsedSeconds={rankingSession.elapsedSeconds}
+        />
+      )}
     </>
   );
 }
