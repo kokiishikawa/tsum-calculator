@@ -282,6 +282,10 @@ Settings = {
 - データはlocalStorageに保存（ブラウザ間で共有されない）
 - 計算・記録はフロントエンド完結（ランキングのみ Supabase）
 - 共有テキストは `lib/share.ts` に集約
+- SEO: サイト情報・下層ページのメタデータは `lib/site.ts`（`pageMetadata()`）に集約
+  - 本番URLは Vercel の `VERCEL_PROJECT_PRODUCTION_URL` から自動取得（`NEXT_PUBLIC_SITE_URL` で上書き可）
+  - トップは `app/page.tsx`（サーバー）が構造化データと説明文 `AboutGuide` を持ち、計算機本体は `components/Calculator.tsx`
+  - `app/sitemap.ts` / `app/robots.ts` / `app/opengraph-image.tsx`。Search Console の確認タグは環境変数 `GOOGLE_SITE_VERIFICATION`
 - ランキング（Supabase `rankings` テーブル）は匿名認証 + RLS で投稿者本人のみ削除可能
   - DB変更は `supabase/migrations/` のSQLをダッシュボードの SQL Editor で実行
   - 投稿者IDはDBの `default auth.uid()` で自動設定（アプリからは送らない）

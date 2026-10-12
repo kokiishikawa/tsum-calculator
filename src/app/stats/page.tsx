@@ -1,11 +1,14 @@
 import { StatsDashboard } from '@/components/StatsDashboard';
 import { AppHeader } from '@/components/AppHeader';
 import { AppFooter } from '@/components/AppFooter';
+import { pageMetadata } from '@/lib/site';
 
-export const metadata = {
-	title: 'マイ統計 | ツムツム 30分効率計算機',
-	description: '保存したセッションの効率推移とツム別成績',
-};
+export const metadata = pageMetadata({
+	title: 'マイ統計',
+	description:
+		'保存したツムツムのコイン稼ぎ記録から、30分効率の推移とツム別の成績をグラフで確認できます。',
+	path: '/stats',
+});
 
 export default function StatsPage() {
 	return (

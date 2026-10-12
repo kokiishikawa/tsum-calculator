@@ -1,190 +1,45 @@
-'use client';
+import { Calculator } from '@/components/Calculator';
+import { AboutGuide, FAQ_ITEMS } from '@/components/AboutGuide';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 
-import { useState } from 'react';
-import { Timer } from '@/components/Timer';
-import { Settings } from '@/components/Settings';
-import { PlayInput } from '@/components/PlayInput';
-import { Statistics } from '@/components/Statistics';
-import { PlayHistory } from '@/components/PlayHistory';
-import { SavedSessions } from '@/components/SavedSessions';
-import { useTimer, useCalculator, useSessions } from '@/hooks';
-import { Button } from '@/components/ui/button';
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Save, Check, Trophy } from 'lucide-react';
-import { RankingSubmitDialog } from '@/components/RankingSubmitDialog';
-import { SessionChart } from '@/components/SessionChart';
-import { AppHeader } from '@/components/AppHeader';
-import { AppFooter } from '@/components/AppFooter';
-import { SESSION_SECONDS } from '@/types';
+/**
+ * 構造化データ（Googleにアプリの種類やFAQを伝える）
+ */
+const JSON_LD = {
+	'@context': 'https://schema.org',
+	'@graph': [
+		{
+			'@type': 'WebApplication',
+			name: SITE_NAME,
+			url: `${SITE_URL}/`,
+			description: SITE_DESCRIPTION,
+			applicationCategory: 'UtilitiesApplication',
+			operatingSystem: 'Web',
+			inLanguage: 'ja',
+			offers: { '@type': 'Offer', price: '0', priceCurrency: 'JPY' },
+		},
+		{
+			'@type': 'FAQPage',
+			mainEntity: FAQ_ITEMS.map((item) => ({
+				'@type': 'Question',
+				name: item.question,
+				acceptedAnswer: { '@type': 'Answer', text: item.answer },
+			})),
+		},
+	],
+};
 
 export default function Home() {
-	const timer = useTimer(SESSION_SECONDS);
-	const calculator = useCalculator(timer.elapsedSeconds);
-	const sessions = useSessions();
-
-	const [showResetDialog, setShowResetDialog] = useState(false);
-	const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'empty'>(
-		'idle',
-	);
-	const [showRankingDialog, setShowRankingDialog] = useState(false);
-
-	const handleAddPlay = (rawCoins: number) => {
-		calculator.addPlay(rawCoins, timer.elapsedSeconds);
-	};
-
-	const lastPlay = calculator.plays.at(-1);
-
-	const handleResetConfirm = () => {
-		timer.reset();
-		calculator.clearAll();
-		setShowResetDialog(false);
-	};
-
-	const handleSaveSession = () => {
-		if (calculator.plays.length === 0) {
-			setSaveStatus('empty');
-			setTimeout(() => setSaveStatus('idle'), 2000);
-			return;
-		}
-		sessions.saveSession(
-			calculator.plays,
-			calculator.settings,
-			calculator.statistics,
-			timer.elapsedSeconds,
-		);
-		setSaveStatus('saved');
-		setTimeout(() => setSaveStatus('idle'), 2000);
-	};
-
 	return (
-		<main className="min-h-screen bg-sky-50 dark:bg-background px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-36">
-			<div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
-				{/* ヘッダー */}
-				<AppHeader title="ツムツム 30分効率計算機" />
-				{/* タイマーセクション */}
-				<Timer
-					timeLeft={timer.timeLeft}
-					isRunning={timer.isRunning}
-					elapsedSeconds={timer.elapsedSeconds}
-					onStart={timer.start}
-					onPause={timer.pause}
-					onReset={() => setShowResetDialog(true)}
-				/>
-				{/* 設定セクション */}
-				<Settings
-					settings={calculator.settings}
-					onUpdateSettings={calculator.updateSettings}
-				/>
-				{/* 統計表示セクション */}
-				<Statistics
-					statistics={calculator.statistics}
-					plays={calculator.plays}
-					settings={calculator.settings}
-				/>
-				{/* プレイ推移グラフ */}
-				<SessionChart
-					plays={calculator.plays}
-					settings={calculator.settings}
-					averageCoins={calculator.statistics.averageCoins}
-				/>
-				{/* セッション保存ボタン */}
-				<Button
-					onClick={handleSaveSession}
-					disabled={calculator.plays.length === 0}
-					className={`w-full ${
-						saveStatus === 'saved'
-							? 'bg-green-600 hover:bg-green-600'
-							: saveStatus === 'empty'
-								? 'bg-red-500 hover:bg-red-500'
-								: 'bg-sky-600 hover:bg-sky-700 text-white'
-					}`}
-				>
-					{saveStatus === 'saved' ? (
-						<>
-							<Check className="w-4 h-4 mr-2" />
-							保存しました！
-						</>
-					) : saveStatus === 'empty' ? (
-						'プレイ記録がありません'
-					) : (
-						<>
-							<Save className="w-4 h-4 mr-2" />
-							このセッションを保存
-						</>
-					)}
-				</Button>
-				{/* ランキングに投稿ボタン */}
-				<Button
-					onClick={() => setShowRankingDialog(true)}
-					disabled={calculator.plays.length === 0}
-					variant="outline"
-					className="w-full border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-950"
-				>
-					<Trophy className="w-4 h-4 mr-2" />
-					ランキングに投稿
-				</Button>
-				{/* 履歴テーブルセクション */}
-				<PlayHistory
-					plays={calculator.plays}
-					settings={calculator.settings}
-					onDeletePlay={calculator.deletePlay}
-					onClearAll={calculator.clearAll}
-				/>
-				{/* 保存済みセッション */}
-				<SavedSessions
-					sessions={sessions.sessions}
-					onDeleteSession={sessions.deleteSession}
-					onClearAllSessions={sessions.clearAllSessions}
-				/>
-				<AppFooter />
-			</div>
-
-			{/* 入力バー（画面下部に固定） */}
-			<PlayInput
-				onAddPlay={handleAddPlay}
-				onUndo={lastPlay ? () => calculator.deletePlay(lastPlay.id) : undefined}
-				lastRawCoins={lastPlay?.rawCoins}
-				timeLeft={timer.timeLeft}
-				isRunning={timer.isRunning}
-				disabled={timer.timeLeft === 0}
+		<>
+			<script
+				type="application/ld+json"
+				// 固定データのみ。"<" をエスケープしてscriptタグを閉じられないようにする
+				dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, '\\u003c') }}
 			/>
-
-			{/* ランキング投稿ダイアログ */}
-			<RankingSubmitDialog
-				open={showRankingDialog}
-				onOpenChange={setShowRankingDialog}
-				statistics={calculator.statistics}
-				settings={calculator.settings}
-				plays={calculator.plays}
-				elapsedSeconds={timer.elapsedSeconds}
-			/>
-
-			{/* リセット確認ダイアログ */}
-			<AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>リセットしますか？</AlertDialogTitle>
-						<AlertDialogDescription>
-							タイマーとすべてのプレイ記録がリセットされます。この操作は取り消せません。
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>キャンセル</AlertDialogCancel>
-						<AlertDialogAction onClick={handleResetConfirm}>
-							リセット
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</main>
+			<Calculator>
+				<AboutGuide />
+			</Calculator>
+		</>
 	);
 }

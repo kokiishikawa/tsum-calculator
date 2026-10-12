@@ -1,11 +1,14 @@
 import { RankingBoard } from '@/components/RankingBoard';
 import { AppHeader } from '@/components/AppHeader';
 import { AppFooter } from '@/components/AppFooter';
+import { pageMetadata } from '@/lib/site';
 
-export const metadata = {
-	title: 'ランキング | ツムツム 30分効率計算機',
-	description: 'コミュニティの30分効率ランキング',
-};
+export const metadata = pageMetadata({
+	title: '30分効率ランキング',
+	description:
+		'ツムツムのコイン稼ぎ30分効率をみんなで競うランキング。使用ツム・アイテム構成ごとの効率をチェックして、コイン稼ぎに強いツムを見つけよう。',
+	path: '/ranking',
+});
 
 export default function RankingPage() {
 	return (
