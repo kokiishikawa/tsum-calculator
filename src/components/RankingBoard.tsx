@@ -5,8 +5,32 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRanking } from '@/hooks';
-import { formatNumber, formatTime, getItemCostLabel } from '@/lib/calculator';
-import { Trophy, Search, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+	calculateEarnedCoins,
+	formatNumber,
+	formatTime,
+	getItemCostLabel,
+} from '@/lib/calculator';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { RankingEntry } from '@/types';
+import {
+	Trophy,
+	Search,
+	Loader2,
+	ChevronDown,
+	ChevronUp,
+	Trash2,
+	User,
+} from 'lucide-react';
 
 // ひらがな→カタカナに正規化（部分一致検索用）
 function toKatakana(str: string): string {
@@ -22,15 +46,37 @@ function matchesTsum(entryTsum: string, filter: string): boolean {
 }
 
 export function RankingBoard() {
-	const { rankings, isLoading, error, hasMore, fetchRankings } = useRanking();
+	const {
+		rankings,
+		isLoading,
+		error,
+		hasMore,
+		currentUserId,
+		fetchRankings,
+		deleteRanking,
+	} = useRanking();
 	const [tsumFilter, setTsumFilter] = useState('');
 	const [searchInput, setSearchInput] = useState('');
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+	// 自分の投稿のみ表示（50件より下の投稿も探せるようサーバー側で絞り込む）
+	const [onlyMine, setOnlyMine] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<RankingEntry | null>(null);
+	const [isDeleting, setIsDeleting] = useState(false);
 
-	// 初回ロード
+	const onlyUserId = onlyMine && currentUserId ? currentUserId : undefined;
+
+	// 初回ロード・「自分の投稿」切り替え時
 	useEffect(() => {
-		fetchRankings();
-	}, [fetchRankings]);
+		fetchRankings({ onlyUserId });
+	}, [fetchRankings, onlyUserId]);
+
+	const handleDelete = async () => {
+		if (!deleteTarget) return;
+		setIsDeleting(true);
+		await deleteRanking(deleteTarget.id);
+		setIsDeleting(false);
+		setDeleteTarget(null);
+	};
 
 	// ツム名で絞り込み（クライアント側フィルタリング）
 	const handleSearch = () => {
@@ -48,6 +94,7 @@ export function RankingBoard() {
 		fetchRankings({
 			offset: rankings.length,
 			reset: false,
+			onlyUserId,
 		});
 	};
 
@@ -87,10 +134,31 @@ export function RankingBoard() {
 				</Button>
 			</div>
 
+			{/* 自分の投稿（このブラウザから投稿したことがある場合のみ） */}
+			{currentUserId && (
+				<div className="flex gap-2">
+					<Button
+						size="sm"
+						variant={onlyMine ? 'outline' : 'default'}
+						onClick={() => setOnlyMine(false)}
+					>
+						すべての投稿
+					</Button>
+					<Button
+						size="sm"
+						variant={onlyMine ? 'default' : 'outline'}
+						onClick={() => setOnlyMine(true)}
+					>
+						<User className="w-4 h-4 mr-1" />
+						自分の投稿
+					</Button>
+				</div>
+			)}
+
 			{/* フィルター表示 */}
 			{tsumFilter && (
 				<div className="flex items-center gap-2 text-sm">
-					<span className="bg-sky-100 text-sky-700 px-2 py-1 rounded">
+					<span className="bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-200 px-2 py-1 rounded">
 						{tsumFilter}
 					</span>
 					<button
@@ -110,7 +178,9 @@ export function RankingBoard() {
 				<Card>
 					<CardContent className="py-12 text-center text-muted-foreground">
 						<Trophy className="w-12 h-12 mx-auto mb-4 opacity-30" />
-						{tsumFilter ? (
+						{onlyMine && !tsumFilter ? (
+							<p>このブラウザから投稿したデータはありません</p>
+						) : tsumFilter ? (
 							<>
 								<p>「{tsumFilter}」に一致するデータがありません</p>
 								<p className="text-sm mt-1">別のツム名で検索してみてください</p>
@@ -129,6 +199,7 @@ export function RankingBoard() {
 						const date = new Date(entry.created_at);
 						const dateStr = date.toLocaleDateString('ja-JP');
 						const isExpanded = expandedId === entry.id;
+						const isMine = !!currentUserId && entry.user_id === currentUserId;
 
 						return (
 							<Card
@@ -140,7 +211,8 @@ export function RankingBoard() {
 									<div className="flex items-center gap-3">
 										{/* 順位 */}
 										<div className="w-10 text-center flex-shrink-0">
-											{getRankDisplay(index)}
+											{/* 自分の投稿のみ表示中は全体順位ではないので順位を出さない */}
+											{!onlyMine && getRankDisplay(index)}
 										</div>
 
 										{/* メイン情報 */}
@@ -149,8 +221,13 @@ export function RankingBoard() {
 												<span className="font-bold truncate">
 													{entry.nickname}
 												</span>
+												{isMine && (
+													<span className="text-xs border border-sky-500 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded flex-shrink-0">
+														自分
+													</span>
+												)}
 												{entry.used_tsum && (
-													<span className="text-xs bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded truncate">
+													<span className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-200 px-1.5 py-0.5 rounded truncate">
 														{entry.used_tsum}
 													</span>
 												)}
@@ -163,7 +240,7 @@ export function RankingBoard() {
 
 										{/* 効率 */}
 										<div className="text-right flex-shrink-0">
-											<p className="text-lg font-bold text-sky-700">
+											<p className="text-lg font-bold text-sky-700 dark:text-sky-300 tabular-nums">
 												{formatNumber(entry.efficiency_30min)}
 											</p>
 											<p className="text-xs text-muted-foreground">
@@ -187,19 +264,19 @@ export function RankingBoard() {
 									{isExpanded && (
 										<div className="mt-3 pt-3 border-t space-y-2">
 											<div className="grid grid-cols-2 gap-2 text-sm">
-												<div className="bg-gray-50 rounded p-2">
+												<div className="bg-muted rounded p-2">
 													<p className="text-xs text-muted-foreground">総素コイン</p>
 													<p className="font-bold">{formatNumber(entry.total_raw_coins)}</p>
 												</div>
-												<div className="bg-gray-50 rounded p-2">
+												<div className="bg-muted rounded p-2">
 													<p className="text-xs text-muted-foreground">実質獲得</p>
 													<p className="font-bold">{formatNumber(entry.net_coins)}</p>
 												</div>
-												<div className="bg-gray-50 rounded p-2">
+												<div className="bg-muted rounded p-2">
 													<p className="text-xs text-muted-foreground">経過時間</p>
 													<p className="font-bold">{formatTime(entry.elapsed_seconds)}</p>
 												</div>
-												<div className="bg-gray-50 rounded p-2">
+												<div className="bg-muted rounded p-2">
 													<p className="text-xs text-muted-foreground">倍率</p>
 													<p className="font-bold">×{entry.coin_multiplier}</p>
 												</div>
@@ -211,22 +288,37 @@ export function RankingBoard() {
 													<p className="text-xs font-medium text-muted-foreground mb-1">
 														プレイ詳細
 													</p>
-													<div className="bg-gray-50 rounded p-2 space-y-1">
+													<div className="bg-muted rounded p-2 space-y-1">
 														{entry.plays.map((play, i) => {
-															const earned = Math.round(play.rawCoins * entry.coin_multiplier);
+															const earned = calculateEarnedCoins(play.rawCoins, entry.coin_multiplier);
 															return (
 																<div key={i} className="flex justify-between text-sm">
 																	<span className="text-muted-foreground">{i + 1}回目</span>
 																	<span>
 																		<span className="font-mono">{formatNumber(play.rawCoins)}</span>
 																		<span className="text-muted-foreground mx-1">→</span>
-																		<span className="font-mono text-green-600">{formatNumber(earned)}</span>
+																		<span className="font-mono text-green-600 dark:text-green-400">{formatNumber(earned)}</span>
 																	</span>
 																</div>
 															);
 														})}
 													</div>
 												</div>
+											)}
+
+											{isMine && (
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={(e) => {
+														e.stopPropagation();
+														setDeleteTarget(entry);
+													}}
+													className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+												>
+													<Trash2 className="w-4 h-4 mr-1" />
+													この投稿を削除
+												</Button>
 											)}
 										</div>
 									)}
@@ -251,6 +343,38 @@ export function RankingBoard() {
 					もっと見る
 				</Button>
 			)}
+
+			{/* 削除確認ダイアログ */}
+			<AlertDialog
+				open={!!deleteTarget}
+				onOpenChange={(open) => {
+					if (!open) setDeleteTarget(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>この投稿を削除しますか？</AlertDialogTitle>
+						<AlertDialogDescription>
+							{deleteTarget &&
+								`${deleteTarget.nickname} / 30分効率 ${formatNumber(deleteTarget.efficiency_30min)} の投稿をランキングから削除します。この操作は取り消せません。`}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeleting}>キャンセル</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault(); // 削除完了まで閉じない
+								handleDelete();
+							}}
+							disabled={isDeleting}
+							className="bg-red-600 hover:bg-red-700 text-white"
+						>
+							{isDeleting && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+							削除する
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

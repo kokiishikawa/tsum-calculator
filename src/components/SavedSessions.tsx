@@ -28,7 +28,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { SavedSession } from '@/types';
-import { formatNumber, formatTime } from '@/lib/calculator';
+import { calculateEarnedCoins, formatNumber, formatTime } from '@/lib/calculator';
+import { buildShareText, shareToLine } from '@/lib/share';
 import { RankingSubmitDialog } from '@/components/RankingSubmitDialog';
 import {
   Trash2,
@@ -60,40 +61,14 @@ export function SavedSessions({
   const [rankingSession, setRankingSession] = useState<SavedSession | null>(null);
 
   // 共有用テキストを生成
-  const generateShareText = (session: SavedSession) => {
-    const { statistics, plays, settings } = session;
-    const elapsedTimeFormatted = formatTime(session.elapsedSeconds);
-    const savedDate = new Date(session.savedAt).toLocaleString('ja-JP');
-
-    const playDetails = plays
-      .map((play, index) => {
-        const earnedCoins = Math.round(play.rawCoins * settings.coinMultiplier);
-        return `${index + 1}回目: ${formatNumber(play.rawCoins)} → ${formatNumber(earnedCoins)}`;
-      })
-      .join('\n');
-
-    const tsumName = settings.usedTsum ? `使用ツム: ${settings.usedTsum}\n` : '';
-
-    return `【ツムツム 30分効率】
-記録日時: ${savedDate}
-${tsumName}
-■ 結果
-30分効率: ${formatNumber(statistics.efficiency30min)} コイン
-1分効率: ${formatNumber(statistics.efficiency1min)} コイン
-
-■ サマリー
-プレイ回数: ${statistics.playCount} 回
-経過時間: ${elapsedTimeFormatted}
-総素コイン: ${formatNumber(statistics.totalRawCoins)}
-総獲得コイン: ${formatNumber(statistics.totalEarnedCoins)}
-アイテムコスト: ${formatNumber(statistics.totalItemCost)}
-実質獲得: ${formatNumber(statistics.netCoins)} コイン
-
-■ プレイ詳細（素コイン → 獲得）
-${playDetails || 'なし'}
-
-#ツムツム #効率計算`;
-  };
+  const generateShareText = (session: SavedSession) =>
+    buildShareText({
+      plays: session.plays,
+      settings: session.settings,
+      statistics: session.statistics,
+      elapsedSeconds: session.elapsedSeconds,
+      savedAt: session.savedAt,
+    });
 
   // コピー
   const handleCopy = async (session: SavedSession) => {
@@ -108,11 +83,7 @@ ${playDetails || 'なし'}
   };
 
   // LINE共有
-  const handleLineShare = (session: SavedSession) => {
-    const text = generateShareText(session);
-    const lineUrl = `https://line.me/R/share?text=${encodeURIComponent(text)}`;
-    window.open(lineUrl, '_blank');
-  };
+  const handleLineShare = (session: SavedSession) => shareToLine(generateShareText(session));
 
   if (sessions.length === 0) {
     return null;
@@ -157,7 +128,7 @@ ${playDetails || 'なし'}
                     <div>
                       <p className="font-medium">
                         {session.settings.usedTsum && (
-                          <span className="text-sky-600 mr-2">{session.settings.usedTsum}</span>
+                          <span className="text-sky-600 dark:text-sky-400 mr-2">{session.settings.usedTsum}</span>
                         )}
                         30分効率: {formatNumber(session.statistics.efficiency30min)}
                       </p>
@@ -209,7 +180,7 @@ ${playDetails || 'なし'}
                     variant="outline"
                     size="sm"
                     onClick={() => setRankingSession(session)}
-                    className="w-full border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                    className="w-full border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-950"
                   >
                     <Trophy className="w-4 h-4 mr-1" />
                     ランキングに投稿
@@ -240,7 +211,7 @@ ${playDetails || 'なし'}
                 <DialogTitle className="text-xl">
                   セッション詳細
                   {selectedSession.settings.usedTsum && (
-                    <span className="ml-2 text-sky-600">({selectedSession.settings.usedTsum})</span>
+                    <span className="ml-2 text-sky-600 dark:text-sky-400">({selectedSession.settings.usedTsum})</span>
                   )}
                 </DialogTitle>
                 <p className="text-sm text-muted-foreground">
@@ -250,7 +221,7 @@ ${playDetails || 'なし'}
 
               <div className="space-y-4">
                 {/* 効率 */}
-                <div className="bg-blue-600 text-white rounded-lg p-4 text-center">
+                <div className="bg-blue-600 dark:bg-blue-800 text-white rounded-lg p-4 text-center">
                   <p className="text-sm opacity-80">30分効率</p>
                   <p className="text-3xl font-bold">
                     {formatNumber(selectedSession.statistics.efficiency30min)}
@@ -260,27 +231,27 @@ ${playDetails || 'なし'}
 
                 {/* サマリー */}
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="bg-gray-100 rounded p-2">
+                  <div className="bg-muted rounded p-2">
                     <p className="text-muted-foreground">1分効率</p>
                     <p className="font-bold">{formatNumber(selectedSession.statistics.efficiency1min)}</p>
                   </div>
-                  <div className="bg-gray-100 rounded p-2">
+                  <div className="bg-muted rounded p-2">
                     <p className="text-muted-foreground">プレイ回数</p>
                     <p className="font-bold">{selectedSession.statistics.playCount} 回</p>
                   </div>
-                  <div className="bg-gray-100 rounded p-2">
+                  <div className="bg-muted rounded p-2">
                     <p className="text-muted-foreground">経過時間</p>
                     <p className="font-bold">{formatTime(selectedSession.elapsedSeconds)}</p>
                   </div>
-                  <div className="bg-gray-100 rounded p-2">
+                  <div className="bg-muted rounded p-2">
                     <p className="text-muted-foreground">実質獲得</p>
                     <p className="font-bold">{formatNumber(selectedSession.statistics.netCoins)}</p>
                   </div>
-                  <div className="bg-gray-100 rounded p-2">
+                  <div className="bg-muted rounded p-2">
                     <p className="text-muted-foreground">総素コイン</p>
                     <p className="font-bold">{formatNumber(selectedSession.statistics.totalRawCoins)}</p>
                   </div>
-                  <div className="bg-gray-100 rounded p-2">
+                  <div className="bg-muted rounded p-2">
                     <p className="text-muted-foreground">総獲得コイン</p>
                     <p className="font-bold">{formatNumber(selectedSession.statistics.totalEarnedCoins)}</p>
                   </div>
@@ -300,8 +271,9 @@ ${playDetails || 'なし'}
                       </TableHeader>
                       <TableBody>
                         {selectedSession.plays.map((play, index) => {
-                          const earnedCoins = Math.round(
-                            play.rawCoins * selectedSession.settings.coinMultiplier
+                          const earnedCoins = calculateEarnedCoins(
+                            play.rawCoins,
+                            selectedSession.settings.coinMultiplier
                           );
                           return (
                             <TableRow key={play.id}>

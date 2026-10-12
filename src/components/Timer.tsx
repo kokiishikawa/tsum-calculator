@@ -25,14 +25,14 @@ export function Timer({
   const isFinished = timeLeft === 0;
 
   return (
-    <Card className="bg-sky-500 text-white">
-      <CardContent className="p-6">
+    <Card className="bg-sky-500 dark:bg-sky-800 text-white border-0">
+      <CardContent className="p-5 md:p-6">
         <div className="text-center space-y-4">
           {/* 残り時間 */}
           <div>
             <p className="text-sm opacity-80">残り時間</p>
             <p
-              className={`text-6xl font-bold font-mono tracking-wider ${
+              className={`text-5xl md:text-6xl font-bold font-mono tracking-wider ${
                 isFinished ? 'text-yellow-300 animate-pulse' : ''
               }`}
             >
@@ -53,7 +53,7 @@ export function Timer({
                 onClick={onStart}
                 disabled={isFinished}
                 size="lg"
-                className="bg-white text-sky-600 hover:bg-sky-50 font-bold"
+                className="bg-white text-sky-700 hover:bg-sky-50 font-bold"
               >
                 <Play className="w-5 h-5 mr-2" />
                 スタート
@@ -62,7 +62,7 @@ export function Timer({
               <Button
                 onClick={onPause}
                 size="lg"
-                className="bg-white text-sky-600 hover:bg-sky-50 font-bold"
+                className="bg-white text-sky-700 hover:bg-sky-50 font-bold"
               >
                 <Pause className="w-5 h-5 mr-2" />
                 一時停止
@@ -72,7 +72,7 @@ export function Timer({
               onClick={onReset}
               size="lg"
               variant="secondary"
-              className="bg-sky-600 text-white hover:bg-sky-700 font-bold"
+              className="bg-sky-600 dark:bg-sky-900 text-white hover:bg-sky-700 font-bold"
             >
               <RotateCcw className="w-5 h-5 mr-2" />
               リセット

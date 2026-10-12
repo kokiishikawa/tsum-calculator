@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Play, Settings } from '@/types';
-import { formatNumber, formatTime } from '@/lib/calculator';
+import { calculateEarnedCoins, formatNumber, formatTime } from '@/lib/calculator';
 import { Trash2, History } from 'lucide-react';
 
 interface PlayHistoryProps {
@@ -65,7 +65,7 @@ export function PlayHistory({
               variant="outline"
               size="sm"
               onClick={() => setShowClearDialog(true)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
             >
               <Trash2 className="w-4 h-4 mr-1" />
               全削除
@@ -86,8 +86,9 @@ export function PlayHistory({
               </TableHeader>
               <TableBody>
                 {plays.map((play, index) => {
-                  const earnedCoins = Math.round(
-                    play.rawCoins * settings.coinMultiplier
+                  const earnedCoins = calculateEarnedCoins(
+                    play.rawCoins,
+                    settings.coinMultiplier
                   );
                   return (
                     <TableRow key={play.id}>
@@ -97,7 +98,7 @@ export function PlayHistory({
                       <TableCell className="text-right font-mono">
                         {formatNumber(play.rawCoins)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-green-600">
+                      <TableCell className="text-right font-mono text-green-600 dark:text-green-400">
                         {formatNumber(earnedCoins)}
                       </TableCell>
                       <TableCell className="text-center font-mono text-muted-foreground">

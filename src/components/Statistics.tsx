@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Statistics as StatisticsType, Play, Settings } from '@/types';
 import { formatNumber, formatTime } from '@/lib/calculator';
+import { buildShareText, shareToLine } from '@/lib/share';
 import {
   Coins,
   TrendingUp,
@@ -35,7 +36,7 @@ interface StatCardProps {
 function StatCard({ label, value, icon, highlight, subValue }: StatCardProps) {
   return (
     <Card
-      className={highlight ? 'bg-sky-500 text-white' : ''}
+      className={highlight ? 'bg-sky-500 dark:bg-sky-800 text-white border-0' : ''}
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-1">
@@ -72,34 +73,13 @@ export function Statistics({ statistics, plays, settings }: StatisticsProps) {
       : '00:00';
 
   // 共有用テキストを生成
-  const generateShareText = () => {
-    // プレイ詳細テキストを生成（記録順）
-    const playDetails = plays
-      .map((play, index) => {
-        const earnedCoins = Math.round(play.rawCoins * settings.coinMultiplier);
-        return `${index + 1}回目: ${formatNumber(play.rawCoins)} → ${formatNumber(earnedCoins)}`;
-      })
-      .join('\n');
-
-    return `【ツムツム 30分効率】
-
-■ 結果
-30分効率: ${formatNumber(statistics.efficiency30min)} コイン
-1分効率: ${formatNumber(statistics.efficiency1min)} コイン
-
-■ サマリー
-プレイ回数: ${statistics.playCount} 回
-経過時間: ${elapsedTimeFormatted}
-総素コイン: ${formatNumber(statistics.totalRawCoins)}
-総獲得コイン: ${formatNumber(statistics.totalEarnedCoins)}
-アイテムコスト: ${formatNumber(statistics.totalItemCost)}
-実質獲得: ${formatNumber(statistics.netCoins)} コイン
-
-■ プレイ詳細（素コイン → 獲得）
-${playDetails || 'なし'}
-
-#ツムツム #効率計算`;
-  };
+  const generateShareText = () =>
+    buildShareText({
+      plays,
+      settings,
+      statistics,
+      elapsedSeconds: Math.round(statistics.elapsedMinutes * 60),
+    });
 
   // Web Share API で共有
   const handleShare = async () => {
@@ -136,22 +116,18 @@ ${playDetails || 'なし'}
   };
 
   // LINEで共有
-  const handleLineShare = () => {
-    const text = generateShareText();
-    const lineUrl = `https://line.me/R/share?text=${encodeURIComponent(text)}`;
-    window.open(lineUrl, '_blank');
-  };
+  const handleLineShare = () => shareToLine(generateShareText());
 
   return (
     <div className="space-y-4">
       {/* メイン指標: 30分効率 */}
-      <Card className="bg-blue-600 text-white">
+      <Card className="bg-blue-600 dark:bg-blue-800 text-white border-0">
         <CardContent className="p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <TrendingUp className="w-6 h-6" />
             <span className="text-lg opacity-90">30分効率</span>
           </div>
-          <p className="text-5xl font-bold tracking-tight">
+          <p className="text-5xl font-bold tracking-tight tabular-nums">
             {formatNumber(statistics.efficiency30min)}
           </p>
           <p className="text-sm opacity-80 mt-2">コイン / 30分</p>
@@ -174,7 +150,7 @@ ${playDetails || 'なし'}
           className="flex-1 max-w-32"
         >
           {copied ? (
-            <Check className="w-4 h-4 mr-2 text-green-500" />
+            <Check className="w-4 h-4 mr-2 text-green-600 dark:text-green-400" />
           ) : (
             <Copy className="w-4 h-4 mr-2" />
           )}
@@ -226,7 +202,7 @@ ${playDetails || 'なし'}
         <StatCard
           label="総獲得コイン"
           value={statistics.totalEarnedCoins}
-          icon={<Coins className="w-4 h-4 text-green-500" />}
+          icon={<Coins className="w-4 h-4 text-green-600 dark:text-green-400" />}
           subValue="倍率適用後"
         />
         <StatCard

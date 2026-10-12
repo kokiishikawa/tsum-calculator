@@ -59,9 +59,30 @@ export const ITEM_COST_PRESETS: ItemCostPreset[] = [
 	{ label: '+Coin + 5→4', value: 2300 },
 	{ label: '+Coin + 5→4 + +Time', value: 3300 },
 	{ label: '+Coin + 5→4 + +Bomb', value: 3800 },
-	{ label: 'フルアイテム', value: 6300 },
+	{ label: 'フルアイテム', value: 5300 }, // +Coin + 5→4 + +Time + +Bomb + +Score
 	{ label: 'カスタム', value: -1 }, // 状態を表すためvalueは-1
 ];
+
+/**
+ * 各アイテム単体のコスト（参考表示用）
+ */
+export const ITEM_PRICES: ItemCostPreset[] = [
+	{ label: '+Coin', value: 500 },
+	{ label: '+Score', value: 500 },
+	{ label: '+Time', value: 1000 },
+	{ label: '+Bomb', value: 1500 },
+	{ label: '5→4', value: 1800 },
+];
+
+/**
+ * タイマーの長さ（秒）
+ */
+export const SESSION_SECONDS = 1800;
+
+/**
+ * アプリのバージョン
+ */
+export const APP_VERSION = '2.0';
 
 /**
  * デフォルト設定
@@ -85,11 +106,37 @@ export interface SavedSession {
 }
 
 /**
+ * グラフ用: 各プレイ時点の推移
+ */
+export interface TimelinePoint {
+	playNumber: number; // 何回目のプレイか（1始まり）
+	rawCoins: number; // 素コイン
+	earnedCoins: number; // 獲得コイン（倍率適用後）
+	netCoins: number; // そのプレイの実質コイン
+	cumulativeNetCoins: number; // 累計実質コイン
+	elapsedTime: number; // 記録時の経過秒数
+	efficiency30min: number | null; // その時点の30分効率（経過0秒ならnull）
+}
+
+/**
+ * ツム別の成績
+ */
+export interface TsumStats {
+	tsum: string; // ツム名（未設定は空文字）
+	sessionCount: number;
+	best30min: number;
+	average30min: number;
+	averageRawCoins: number; // 平均素コイン/プレイ
+	totalNetCoins: number;
+}
+
+/**
  * ランキングエントリー
  */
 export interface RankingEntry {
 	id: string;
 	created_at: string;
+	user_id: string | null; // 投稿者（匿名認証のユーザーID）、旧データはnull
 	nickname: string;
 	efficiency_30min: number;
 	efficiency_1min: number;

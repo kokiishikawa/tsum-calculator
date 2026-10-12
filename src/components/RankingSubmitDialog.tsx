@@ -79,7 +79,10 @@ export function RankingSubmitDialog({
 				{submitStatus === 'success' ? (
 					<div className="text-center space-y-4 py-4">
 						<p className="text-2xl">🎉</p>
-						<p className="font-bold text-green-600">投稿しました！</p>
+						<p className="font-bold text-green-600 dark:text-green-400">投稿しました！</p>
+						<p className="text-xs text-muted-foreground">
+							このブラウザからなら、ランキング画面の「自分の投稿」でいつでも削除できます
+						</p>
 						<Button onClick={handleClose} className="w-full">
 							閉じる
 						</Button>
@@ -87,10 +90,10 @@ export function RankingSubmitDialog({
 				) : (
 					<div className="space-y-4">
 						{/* プレビュー */}
-						<div className="bg-sky-50 rounded-lg p-3 space-y-1 text-sm">
+						<div className="bg-sky-50 dark:bg-sky-950 rounded-lg p-3 space-y-1 text-sm">
 							<div className="flex justify-between">
 								<span className="text-muted-foreground">30分効率</span>
-								<span className="font-bold text-sky-700">
+								<span className="font-bold text-sky-700 dark:text-sky-300">
 									{formatNumber(statistics.efficiency30min)}
 								</span>
 							</div>

@@ -20,9 +20,14 @@ interface UseCalculatorReturn {
  */
 export function useCalculator(elapsedSeconds: number = 0): UseCalculatorReturn {
   const [plays, setPlays] = useLocalStorage<Play[]>('tsum-calculator-plays', []);
-  const [settings, setSettings] = useLocalStorage<Settings>(
+  const [storedSettings, setSettings] = useLocalStorage<Settings>(
     'tsum-calculator-settings',
     DEFAULT_SETTINGS
+  );
+  // 古いバージョンで保存された設定に欠けている項目をデフォルト値で補う
+  const settings = useMemo(
+    () => ({ ...DEFAULT_SETTINGS, ...storedSettings }),
+    [storedSettings]
   );
 
   // 統計情報を計算（メモ化）
@@ -55,7 +60,7 @@ export function useCalculator(elapsedSeconds: number = 0): UseCalculatorReturn {
   // 設定を更新
   const updateSettings = useCallback(
     (newSettings: Partial<Settings>) => {
-      setSettings((prev) => ({ ...prev, ...newSettings }));
+      setSettings((prev) => ({ ...DEFAULT_SETTINGS, ...prev, ...newSettings }));
     },
     [setSettings]
   );

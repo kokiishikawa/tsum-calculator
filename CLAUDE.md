@@ -9,12 +9,15 @@ LINE:ディズニー ツムツムのコイン稼ぎ効率を計算するWebア�
 
 ## Tech Stack
 
-- Framework: Next.js 14 (App Router)
+- Framework: Next.js 16 (App Router)
 - Language: TypeScript
 - Styling: Tailwind CSS
 - UI: shadcn/ui
-- State: React Hooks + localStorage
-- Test: Jest
+- State: React Hooks + localStorage（`useSyncExternalStore` で同期）
+- Chart: Recharts
+- Theme: next-themes（ダークモード）
+- PWA: `app/manifest.ts` + `public/sw.js`
+- Test: Jest（`npm test`）
 
 ## プロジェクト構成
 
@@ -121,11 +124,13 @@ npm run lint -- --fix
 
 ### 30分効率の計算フロー
 
-1. 各プレイの素コインを合計
-2. +Coin倍率（デフォルト1.3倍）を適用
+1. 各プレイの素コインに+Coin倍率（デフォルト1.3倍）を適用し、**プレイ単位で丸めて**合計（`calculateEarnedCoins()`）
+2. 総素コインも別途集計
 3. 使用アイテムコストを差し引く
 4. 経過時間（分）で割る → **1分効率**
-5. 1分効率 × 30 → **30分効率**
+5. 丸める前の1分効率 × 30 → **30分効率**
+
+計算ロジックを変更したら `npm test` で `src/__tests__/lib/calculator.test.ts` を確認すること
 
 実装は `lib/calculator.ts` の `calculateStatistics()` を参照
 
@@ -136,7 +141,8 @@ npm run lint -- --fix
 - +Coin のみ: 500
 - +Coin + 5→4: 2,300
 - +Coin + 5→4 + +Time: 3,300
-- フルアイテム: 6,300
+- +Coin + 5→4 + +Bomb: 3,800
+- フルアイテム: 5,300（+Coin 500 / +Score 500 / +Time 1,000 / +Bomb 1,500 / 5→4 1,800）
 - カスタム: ユーザー入力可
 
 ## 現在の開発状況
@@ -147,7 +153,10 @@ npm run lint -- --fix
 - ✅ プレイ記録の追加・削除
 - ✅ 30分効率のリアルタイム計算
 - ✅ localStorageでのデータ保存
-- ✅ レスポンシブデザイン
+- ✅ レスポンシブデザイン（入力バーは画面下部に固定）
+- ✅ セッション保存・共有・ランキング投稿
+- ✅ プレイ推移グラフ（`SessionChart`）、マイ統計ページ（`/stats`）
+- ✅ ダークモード、PWA（ホーム画面追加・オフライン起動）
 
 ### よくある作業パターン
 
@@ -208,15 +217,16 @@ npm run lint -- --fix
 }
 ```
 
-### TimerState型 タイマー状態
+### タイマー状態（localStorage: `tsum-calculator-timer`）
 
 ```typescript
 {
-	timeLeft: number; // 残り秒数
-	isRunning: boolean; // 実行中フラグ
-	startTime: number | null; // 開始時刻
+	startedAt: number | null; // 実行中の再開時刻（ミリ秒）、停止中はnull
+	pausedElapsed: number; // 最後に一時停止した時点の経過秒数
 }
 ```
+
+開始時刻を保存するため、リロードやタブ破棄後も計測が続く（`hooks/useTimer.ts`）
 
 ### ItemCostPreset型 アイテムコストのプリセット
 
@@ -235,7 +245,7 @@ ItemCostPreset[] = [
   { label: '+Coin + 5→4', value: 2300 },
   { label: '+Coin + 5→4 + +Time', value: 3300 },
   { label: '+Coin + 5→4 + +Bomb', value: 3800 },
-  { label: 'フルアイテム', value: 6300 },
+  { label: 'フルアイテム', value: 5300 },
   { label: 'カスタム', value: -1 }, // 状態を表すためvalueは-1
 ]
 ```
@@ -270,5 +280,8 @@ Settings = {
 ## Notes
 
 - データはlocalStorageに保存（ブラウザ間で共有されない）
-- バックエンドなし、完全にフロントエンド
-- 将来的にPWA化を検討
+- 計算・記録はフロントエンド完結（ランキングのみ Supabase）
+- 共有テキストは `lib/share.ts` に集約
+- ランキング（Supabase `rankings` テーブル）は匿名認証 + RLS で投稿者本人のみ削除可能
+  - DB変更は `supabase/migrations/` のSQLをダッシュボードの SQL Editor で実行
+  - 投稿者IDはDBの `default auth.uid()` で自動設定（アプリからは送らない）

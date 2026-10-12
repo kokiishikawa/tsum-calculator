@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocalStorage } from './useLocalStorage';
 
 interface UseTimerReturn {
   timeLeft: number;
@@ -12,125 +13,98 @@ interface UseTimerReturn {
 }
 
 /**
+ * localStorageに保存するタイマー状態
+ * 開始時刻を保存するので、リロードやタブ破棄後も計測が続く
+ */
+interface TimerSnapshot {
+  startedAt: number | null; // 実行中の場合の再開時刻（ミリ秒）、停止中はnull
+  pausedElapsed: number; // 最後に一時停止した時点の経過秒数
+}
+
+const INITIAL_SNAPSHOT: TimerSnapshot = { startedAt: null, pausedElapsed: 0 };
+
+function computeElapsed(snapshot: TimerSnapshot, now: number, maxSeconds: number): number {
+  const elapsed =
+    snapshot.startedAt === null
+      ? snapshot.pausedElapsed
+      : snapshot.pausedElapsed + Math.floor((now - snapshot.startedAt) / 1000);
+  return Math.min(Math.max(elapsed, 0), maxSeconds);
+}
+
+/**
  * カウントダウンタイマーのカスタムフック
  * バックグラウンドでも正確に動作するようタイムスタンプベースで計算
  * @param initialSeconds 初期秒数（デフォルト: 1800秒 = 30分）
  */
 export function useTimer(initialSeconds: number = 1800): UseTimerReturn {
-  // 開始時刻（ミリ秒）
-  const [startTime, setStartTime] = useState<number | null>(null);
-  // 一時停止時点での経過秒数
-  const [pausedElapsed, setPausedElapsed] = useState(0);
-  // 実行中フラグ
-  const [isRunning, setIsRunning] = useState(false);
-  // 表示用の経過秒数（定期更新）
-  const [displayElapsed, setDisplayElapsed] = useState(0);
+  const [snapshot, setSnapshot] = useLocalStorage<TimerSnapshot>(
+    'tsum-calculator-timer',
+    INITIAL_SNAPSHOT
+  );
+  // 表示更新用の現在時刻
+  const [now, setNow] = useState(() => Date.now());
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 実際の経過秒数を計算
-  const calculateElapsed = useCallback(() => {
-    if (!isRunning || startTime === null) {
-      return pausedElapsed;
-    }
-    const now = Date.now();
-    const elapsed = pausedElapsed + Math.floor((now - startTime) / 1000);
-    return Math.min(elapsed, initialSeconds); // 最大値を超えない
-  }, [isRunning, startTime, pausedElapsed, initialSeconds]);
-
-  // 表示を更新する関数
-  const updateDisplay = useCallback(() => {
-    setDisplayElapsed(calculateElapsed());
-  }, [calculateElapsed]);
+  const isRunning = snapshot.startedAt !== null;
+  const elapsedSeconds = computeElapsed(snapshot, now, initialSeconds);
 
   // タイマー開始
   const start = useCallback(() => {
-    if (calculateElapsed() >= initialSeconds) return; // 既に終了
-    setStartTime(Date.now());
-    setIsRunning(true);
-  }, [calculateElapsed, initialSeconds]);
+    const current = Date.now();
+    setSnapshot((prev) => {
+      if (prev.startedAt !== null || prev.pausedElapsed >= initialSeconds) return prev;
+      return { ...prev, startedAt: current };
+    });
+    setNow(current);
+  }, [setSnapshot, initialSeconds]);
 
   // タイマー一時停止
   const pause = useCallback(() => {
-    if (isRunning) {
-      setPausedElapsed(calculateElapsed());
-      setStartTime(null);
-      setIsRunning(false);
-    }
-  }, [isRunning, calculateElapsed]);
+    const current = Date.now();
+    setSnapshot((prev) =>
+      prev.startedAt === null
+        ? prev
+        : { startedAt: null, pausedElapsed: computeElapsed(prev, current, initialSeconds) }
+    );
+    setNow(current);
+  }, [setSnapshot, initialSeconds]);
 
   // タイマーリセット
   const reset = useCallback(() => {
-    setIsRunning(false);
-    setStartTime(null);
-    setPausedElapsed(0);
-    setDisplayElapsed(0);
-  }, []);
+    setSnapshot(INITIAL_SNAPSHOT);
+  }, [setSnapshot]);
 
-  // 定期的に表示を更新（1秒ごと）
+  // 実行中は表示を更新し、時間切れになったら停止する
   useEffect(() => {
-    if (isRunning) {
-      // 即座に更新
-      updateDisplay();
+    if (!isRunning) return;
 
-      intervalRef.current = setInterval(() => {
-        const elapsed = calculateElapsed();
-        setDisplayElapsed(elapsed);
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      setSnapshot((prev) =>
+        prev.startedAt !== null && computeElapsed(prev, current, initialSeconds) >= initialSeconds
+          ? { startedAt: null, pausedElapsed: initialSeconds }
+          : prev
+      );
+    };
 
-        // 時間切れチェック
-        if (elapsed >= initialSeconds) {
-          setIsRunning(false);
-          setPausedElapsed(initialSeconds);
-          setStartTime(null);
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-        }
-      }, 1000);
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      };
-    }
-  }, [isRunning, calculateElapsed, updateDisplay, initialSeconds]);
-
-  // Page Visibility API: ページが再表示されたときに更新
-  useEffect(() => {
+    // 秒の切り替わりを取りこぼさないよう1秒より短い間隔で更新
+    const intervalId = setInterval(tick, 250);
+    // バックグラウンドから復帰したときは即座に更新
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isRunning) {
-        updateDisplay();
-      }
+      if (document.visibilityState === 'visible') tick();
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', tick);
+
     return () => {
+      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', tick);
     };
-  }, [isRunning, updateDisplay]);
-
-  // フォーカス復帰時にも更新
-  useEffect(() => {
-    const handleFocus = () => {
-      if (isRunning) {
-        updateDisplay();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [isRunning, updateDisplay]);
-
-  const elapsedSeconds = displayElapsed;
-  const timeLeft = Math.max(0, initialSeconds - elapsedSeconds);
+  }, [isRunning, setSnapshot, initialSeconds]);
 
   return {
-    timeLeft,
+    timeLeft: initialSeconds - elapsedSeconds,
     isRunning,
     elapsedSeconds,
     start,

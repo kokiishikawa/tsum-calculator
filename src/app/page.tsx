@@ -20,11 +20,14 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Save, Check, Trophy } from 'lucide-react';
-import Link from 'next/link';
 import { RankingSubmitDialog } from '@/components/RankingSubmitDialog';
+import { SessionChart } from '@/components/SessionChart';
+import { AppHeader } from '@/components/AppHeader';
+import { AppFooter } from '@/components/AppFooter';
+import { SESSION_SECONDS } from '@/types';
 
 export default function Home() {
-	const timer = useTimer(1800); // 30分 = 1800秒
+	const timer = useTimer(SESSION_SECONDS);
 	const calculator = useCalculator(timer.elapsedSeconds);
 	const sessions = useSessions();
 
@@ -37,6 +40,8 @@ export default function Home() {
 	const handleAddPlay = (rawCoins: number) => {
 		calculator.addPlay(rawCoins, timer.elapsedSeconds);
 	};
+
+	const lastPlay = calculator.plays.at(-1);
 
 	const handleResetConfirm = () => {
 		timer.reset();
@@ -61,12 +66,10 @@ export default function Home() {
 	};
 
 	return (
-		<main className="min-h-screen bg-sky-50 p-4">
-			<div className="max-w-4xl mx-auto space-y-6">
+		<main className="min-h-screen bg-sky-50 dark:bg-background px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-36">
+			<div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
 				{/* ヘッダー */}
-				<h1 className="text-3xl md:text-4xl font-bold text-center text-sky-700 pt-4">
-					ツムツム 30分効率計算機
-				</h1>
+				<AppHeader title="ツムツム 30分効率計算機" />
 				{/* タイマーセクション */}
 				<Timer
 					timeLeft={timer.timeLeft}
@@ -81,13 +84,17 @@ export default function Home() {
 					settings={calculator.settings}
 					onUpdateSettings={calculator.updateSettings}
 				/>
-				{/* 入力セクション */}
-				<PlayInput onAddPlay={handleAddPlay} disabled={timer.timeLeft === 0} />
 				{/* 統計表示セクション */}
 				<Statistics
 					statistics={calculator.statistics}
 					plays={calculator.plays}
 					settings={calculator.settings}
+				/>
+				{/* プレイ推移グラフ */}
+				<SessionChart
+					plays={calculator.plays}
+					settings={calculator.settings}
+					averageCoins={calculator.statistics.averageCoins}
 				/>
 				{/* セッション保存ボタン */}
 				<Button
@@ -98,7 +105,7 @@ export default function Home() {
 							? 'bg-green-600 hover:bg-green-600'
 							: saveStatus === 'empty'
 								? 'bg-red-500 hover:bg-red-500'
-								: 'bg-sky-600 hover:bg-sky-700'
+								: 'bg-sky-600 hover:bg-sky-700 text-white'
 					}`}
 				>
 					{saveStatus === 'saved' ? (
@@ -120,7 +127,7 @@ export default function Home() {
 					onClick={() => setShowRankingDialog(true)}
 					disabled={calculator.plays.length === 0}
 					variant="outline"
-					className="w-full border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+					className="w-full border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-950"
 				>
 					<Trophy className="w-4 h-4 mr-2" />
 					ランキングに投稿
@@ -138,16 +145,18 @@ export default function Home() {
 					onDeleteSession={sessions.deleteSession}
 					onClearAllSessions={sessions.clearAllSessions}
 				/>
-				<Link href="/ranking">
-					<Button variant="link" className="text-sky-600">
-						コミュニティランキングを見る
-					</Button>
-				</Link>
-				{/* フッター */}
-				<footer className="text-center text-sm text-muted-foreground py-4">
-					<p>ツムツム 30分効率計算機 v1.3</p>
-				</footer>
+				<AppFooter />
 			</div>
+
+			{/* 入力バー（画面下部に固定） */}
+			<PlayInput
+				onAddPlay={handleAddPlay}
+				onUndo={lastPlay ? () => calculator.deletePlay(lastPlay.id) : undefined}
+				lastRawCoins={lastPlay?.rawCoins}
+				timeLeft={timer.timeLeft}
+				isRunning={timer.isRunning}
+				disabled={timer.timeLeft === 0}
+			/>
 
 			{/* ランキング投稿ダイアログ */}
 			<RankingSubmitDialog

@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Settings as SettingsIcon, ChevronDown, ChevronUp } from 'lucide-react';
-import { Settings as SettingsType, ITEM_COST_PRESETS } from '@/types';
+import { Settings as SettingsType, ITEM_COST_PRESETS, ITEM_PRICES } from '@/types';
 import { formatNumber } from '@/lib/calculator';
 
 interface SettingsProps {
@@ -22,13 +22,19 @@ interface SettingsProps {
 
 export function Settings({ settings, onUpdateSettings }: SettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isCustomCost, setIsCustomCost] = useState(
-    !ITEM_COST_PRESETS.some(
-      (p) => p.value === settings.itemCost && p.value !== -1
-    )
+  // カスタムを明示的に選んだか（プリセットと同額でもカスタム入力欄を出すため）
+  const [customSelected, setCustomSelected] = useState(false);
+  // 入力途中の倍率（"1." など）を保持する
+  const [multiplierDraft, setMultiplierDraft] = useState<string | null>(null);
+
+  const currentPreset = ITEM_COST_PRESETS.find(
+    (p) => p.value === settings.itemCost && p.value !== -1
   );
+  // 保存値がどのプリセットにも一致しなければカスタム扱い
+  const isCustomCost = customSelected || !currentPreset;
 
   const handleMultiplierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMultiplierDraft(e.target.value);
     const value = parseFloat(e.target.value);
     if (!isNaN(value) && value >= 1.0 && value <= 2.0) {
       onUpdateSettings({ coinMultiplier: value });
@@ -39,9 +45,9 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
     const preset = ITEM_COST_PRESETS.find((p) => p.label === value);
     if (preset) {
       if (preset.value === -1) {
-        setIsCustomCost(true);
+        setCustomSelected(true);
       } else {
-        setIsCustomCost(false);
+        setCustomSelected(false);
         onUpdateSettings({ itemCost: preset.value });
       }
     }
@@ -54,10 +60,6 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
     }
   };
 
-  const currentPreset = ITEM_COST_PRESETS.find(
-    (p) => p.value === settings.itemCost
-  );
-
   return (
     <Card>
       <CardHeader
@@ -69,7 +71,7 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
             <SettingsIcon className="w-5 h-5" />
             設定
           </span>
-          <span className="text-sm font-normal text-muted-foreground flex items-center gap-2">
+          <span className="text-xs md:text-sm font-normal text-muted-foreground flex items-center gap-2 text-right">
             {settings.usedTsum ? `${settings.usedTsum} / ` : ''}倍率: {settings.coinMultiplier}x / コスト: {formatNumber(settings.itemCost)}
             {isOpen ? (
               <ChevronUp className="w-4 h-4" />
@@ -108,8 +110,10 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
                 min="1.0"
                 max="2.0"
                 step="0.1"
-                value={settings.coinMultiplier}
+                inputMode="decimal"
+                value={multiplierDraft ?? settings.coinMultiplier}
                 onChange={handleMultiplierChange}
+                onBlur={() => setMultiplierDraft(null)}
                 className="w-24"
               />
               <span className="text-muted-foreground">倍</span>
@@ -123,7 +127,7 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
           <div className="space-y-2">
             <Label>アイテムコスト（1プレイあたり）</Label>
             <Select
-              value={isCustomCost ? 'カスタム' : currentPreset?.label || 'カスタム'}
+              value={isCustomCost ? 'カスタム' : currentPreset.label}
               onValueChange={handlePresetChange}
             >
               <SelectTrigger>
@@ -145,6 +149,7 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
                   type="number"
                   min="0"
                   step="100"
+                  inputMode="numeric"
                   value={settings.itemCost}
                   onChange={handleCustomCostChange}
                   className="w-32"
@@ -158,12 +163,13 @@ export function Settings({ settings, onUpdateSettings }: SettingsProps) {
           <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
             <p className="font-medium">参考: 各アイテムのコスト</p>
             <ul className="list-disc list-inside space-y-0.5">
-              <li>+Coin: 500</li>
-              <li>5→4: 1,800</li>
-              <li>+Time: 1,000</li>
-              <li>+Bomb: 1,500</li>
-              <li>+Score: 1,500</li>
+              {ITEM_PRICES.map((item) => (
+                <li key={item.label}>
+                  {item.label}: {formatNumber(item.value)}
+                </li>
+              ))}
             </ul>
+            <p>※ 設定を変更すると、記録済みのプレイも含めて再計算されます</p>
           </div>
         </CardContent>
       )}
